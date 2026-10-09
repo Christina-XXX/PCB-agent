@@ -71,5 +71,9 @@
 	"version": "0.0.3",
 	"overrides": {
 		"protobufjs": "7.6.6"
+	},
+	"dependencies": {
+		"cors": "2.8.6",
+		"express": "5.2.1"
 	}
 }
