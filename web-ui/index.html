@@ -2,19 +2,25 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>PCB Agent 知识管理系统</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCB 缺陷分析助手</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="chat-container">
-        <h1> 我的 Agent </h1>
-        <!-- 消息展示区 -->
+        <header class="chat-header">
+            <div class="header-title">PCB 缺陷分析助手</div>
+            <div class="header-sub">基于知识库 + 联网检索，定位缺陷并标注依据</div>
+        </header>
+
         <div id="chat-box" class="chat-box">
-            <div class="message ai-message">你好！我是你的 AI 助手，请问有什么可以帮你？</div>
+            <div class="message ai-message">
+                <div class="msg-text">你好！我是 PCB 缺陷分析助手。请描述你遇到的异常（例如「光学点到光学点不合格，实测偏大」），我会帮你定位缺陷类型并标注依据。</div>
+            </div>
         </div>
-        <!-- 输入区 -->
+
         <div class="input-area">
-            <input type="text" id="user-input" placeholder="请输入你的问题..." />
+            <textarea id="user-input" rows="1" placeholder="描述异常现象，Enter 发送，Shift+Enter 换行"></textarea>
             <button id="send-btn">发送</button>
         </div>
     </div>

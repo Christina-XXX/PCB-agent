@@ -2,79 +2,118 @@ const sendBtn = document.getElementById('send-btn');
 const userInput = document.getElementById('user-input');
 const chatBox = document.getElementById('chat-box');
 
-// 后端服务器的地址
-const API_BASE_URL = 'http://10.164.92.172:9100';
-
-// 发送消息的核心逻辑
 async function sendMessage() {
     const text = userInput.value.trim();
-    if (!text) return; // 如果输入为空，不发送
+    if (!text) return;
 
-    //  在页面上显示用户的消息
     addMessage(text, 'user-message');
-    userInput.value = ''; // 清空输入框
-    userInput.focus(); // 让光标自动回到输入框
+    userInput.value = '';
+    userInput.focus();
+    setSending(true);
 
-    //  显示“正在思考中...”
-    const loadingMsg = addMessage('正在思考中...', 'ai-message');
+    const typing = addTyping();
 
     try {
-        //  给后端发请求 (fetch)
-        const response = await fetch(`${API_BASE_URL}/api/chat`, {
+        const response = await fetch('/api/chat', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ message: text })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text }),
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        //  拿到后端的回复数据
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        
-        //  删掉“正在思考中...”的占位气泡
-        if (loadingMsg && loadingMsg.parentNode) {
-            chatBox.removeChild(loadingMsg);
-        }
 
-        //  显示 AI 真正的回复
-        addMessage(data.reply || "抱歉，AI没有返回内容。", 'ai-message');
-
+        typing.remove();
+        addMessage(data.reply || '抱歉，AI 没有返回内容。', 'ai-message', data.sources || []);
     } catch (error) {
         console.error('请求失败:', error);
-        
-        // 出错时也要删掉“正在思考中...”
-        if (loadingMsg && loadingMsg.parentNode) {
-            chatBox.removeChild(loadingMsg);
-        }
-        
-        // 显示错误提示
-        addMessage('抱歉，连接服务器失败了，请检查后端是否启动。', 'ai-message');
+        typing.remove();
+        addMessage('抱歉，连接服务器失败，请确认后端已启动（在 agent 目录执行 node server.js）。', 'ai-message');
+    } finally {
+        setSending(false);
     }
 }
 
-// 往聊天框加消息
-function addMessage(text, className) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'message ' + className;
-    msgDiv.textContent = text;
-    
-    chatBox.appendChild(msgDiv);
-    chatBox.scrollTop = chatBox.scrollHeight; // 自动滚到最底部
-    
-    return msgDiv; // 返回这个节点，方便上面代码出错时把它删掉
+function setSending(sending) {
+    sendBtn.disabled = sending;
+    sendBtn.textContent = sending ? '思考中…' : '发送';
 }
 
-// 4. 绑定点击和回车事件
-// 点击“发送”按钮
+// 去掉 AI 回复里的 Markdown 标记（# 标题、**加粗** 等），避免符号直接显示出来
+function stripMarkdown(text) {
+    return text
+        .replace(/^\s*#+\s*/gm, '')           // 行首 # 标题
+        .replace(/\*\*([^*]+)\*\*/g, '$1')    // **加粗**
+        .replace(/\*([^*]+)\*/g, '$1')        // *斜体*
+        .replace(/`([^`]+)`/g, '$1')          // `代码`
+        .replace(/^>\s?/gm, '')               // > 引用
+        .trim();
+}
+
+function addMessage(text, className, sources = []) {
+    const wrap = document.createElement('div');
+    wrap.className = 'message ' + className;
+
+    const txt = document.createElement('div');
+    txt.className = 'msg-text';
+    txt.textContent = className === 'ai-message' ? stripMarkdown(text) : text;
+    wrap.appendChild(txt);
+
+    if (sources.length) {
+        const box = document.createElement('div');
+        box.className = 'sources';
+        for (const s of sources) {
+            const item = document.createElement('div');
+            item.className = 'source-item';
+
+            const badge = document.createElement('span');
+            badge.className = 'badge ' + (s.type === '知识库' ? 'kb' : 'web');
+            badge.textContent = s.type === '知识库' ? '知识库' : '网络';
+
+            const name = document.createElement('span');
+            name.className = 'src-name';
+            name.textContent = s.source;
+
+            item.appendChild(badge);
+            item.appendChild(name);
+
+            if (s.text) {
+                const snippet = document.createElement('div');
+                snippet.className = 'src-text';
+                snippet.textContent = stripMarkdown(s.text.slice(0, 100));
+                item.appendChild(snippet);
+            }
+            box.appendChild(item);
+        }
+        wrap.appendChild(box);
+    }
+
+    chatBox.appendChild(wrap);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return wrap;
+}
+
+function addTyping() {
+    const wrap = document.createElement('div');
+    wrap.className = 'message ai-message';
+    wrap.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    chatBox.appendChild(wrap);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return wrap;
+}
+
+// 发送按钮
 sendBtn.addEventListener('click', sendMessage);
 
-// 按“回车键”也能发送
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
+// 输入框：Enter 发送，Shift+Enter 换行
+userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
         sendMessage();
     }
+});
+
+// 输入框自适应高度
+userInput.addEventListener('input', () => {
+    userInput.style.height = 'auto';
+    userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
 });
