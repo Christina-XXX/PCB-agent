@@ -8,6 +8,7 @@ async function sendMessage() {
 
     addMessage(text, 'user-message');
     userInput.value = '';
+    userInput.style.height = 'auto';
     userInput.focus();
     setSending(true);
 
@@ -27,7 +28,7 @@ async function sendMessage() {
     } catch (error) {
         console.error('请求失败:', error);
         typing.remove();
-        addMessage('抱歉，连接服务器失败，请确认后端已启动（在 agent 目录执行 node server.js）。', 'ai-message');
+        addMessage('抱歉，连接服务器失败。请确认后端已启动（在项目目录执行 node --env-file=.env server.js）。', 'ai-message');
     } finally {
         setSending(false);
     }
@@ -53,14 +54,28 @@ function addMessage(text, className, sources = []) {
     const wrap = document.createElement('div');
     wrap.className = 'message ' + className;
 
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar ' + (className === 'ai-message' ? 'ai' : 'user');
+    avatar.textContent = className === 'ai-message' ? '助' : '我';
+    wrap.appendChild(avatar);
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
     const txt = document.createElement('div');
     txt.className = 'msg-text';
     txt.textContent = className === 'ai-message' ? stripMarkdown(text) : text;
-    wrap.appendChild(txt);
+    bubble.appendChild(txt);
 
     if (sources.length) {
         const box = document.createElement('div');
         box.className = 'sources';
+
+        const head = document.createElement('div');
+        head.className = 'sources-head';
+        head.textContent = '出处';
+        box.appendChild(head);
+
         for (const s of sources) {
             const item = document.createElement('div');
             item.className = 'source-item';
@@ -84,9 +99,10 @@ function addMessage(text, className, sources = []) {
             }
             box.appendChild(item);
         }
-        wrap.appendChild(box);
+        bubble.appendChild(box);
     }
 
+    wrap.appendChild(bubble);
     chatBox.appendChild(wrap);
     chatBox.scrollTop = chatBox.scrollHeight;
     return wrap;
@@ -95,7 +111,7 @@ function addMessage(text, className, sources = []) {
 function addTyping() {
     const wrap = document.createElement('div');
     wrap.className = 'message ai-message';
-    wrap.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    wrap.innerHTML = '<div class="avatar ai">助</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
     chatBox.appendChild(wrap);
     chatBox.scrollTop = chatBox.scrollHeight;
     return wrap;
@@ -115,5 +131,5 @@ userInput.addEventListener('keydown', (e) => {
 // 输入框自适应高度
 userInput.addEventListener('input', () => {
     userInput.style.height = 'auto';
-    userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+    userInput.style.height = Math.min(userInput.scrollHeight, 132) + 'px';
 });
